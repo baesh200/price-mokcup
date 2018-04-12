@@ -1,0 +1,484 @@
+<html>
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link href='http://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
+    <title>Cupix Pricing Demo</title>
+    <script>
+        let petitie = {
+            name : "Petitie",
+            classname: "petitie",
+            price: 0,
+            storage: 0.2,
+        };
+        let small = {
+            name : "Small",
+            classname: "small",
+            price: 24,
+            storage: 3,
+        };
+        let medium = {
+            name : "Medium",
+            classname: "medium",
+            price: 59,
+            storage: 10,
+        };
+        let large = {
+            name : "Large",
+            classname: "large",
+            price: 99,
+            storage: 30,
+        };
+        let xlarge = {
+            name : "X-Large",
+            classname: "xlarge",
+            price: 199,
+            storage: 100,
+        };
+        let storage_description = [
+            "Prices and storage limits are on the active workspace basis.",
+            "360 photos, 360 videos and asset files you upload will be counted for the storage limit and all other data or files created as the result of 3D processing will not be counted.",
+            "If you delete unnecessary 3D tours, 360 photos and videos used in the 3D tours will not be counted.",
+            "Each workspace has its own Asset Library in which you can upload and manage images, drawings, and 3D BIM models (AEC Pack).",
+            "You can create, delete, activate and deactivate workspaces at any time (Standard Feature), and deactivated workspaces will not be charged."
+        ];
+        let standard_feature_description = [
+            "3D tour processing - automatic 3D tour generation from 360 photos",
+            "Manage (search, sort, tagging, delete) 3D tours",
+            "Create, search, activate (or deactivate) and delete Workspaces (A Workspace is a folder where you can organize many 3D tours.)",
+            "Translate, scale, and align many 3D sections (=subset of a 3D tour) into a larger one",
+            "Arrange a floor plan image (JPEG, PNG or PDF)",
+            "Instant Web publish (anyone who knows the link can access and play the 3D tour) or embed 3D tours in your Website",
+            "Box, 3D text, and pushpin 3D objects (not included in Petitie Plan)",
+            "Download PLY (point cloud), OBJ (textured mesh) and Json (Pano coordinates and connectivies) (not included in Petite Plan)"
+        ];
+
+        let photo = {
+            name : "Photographer Pack",
+            price: 29,
+            classname: "photo",
+            added: false,
+            description: [
+                "Edit Photos (area blur and  tone adjustment)",
+                "Unlimited number of Google Street View Publish / Unpublish",
+                "Camera Animation",
+                "Custom Branding in the Player (includnig Nadir photo for GSV)",
+                "Social Media Share"
+            ]
+        };
+        let aec = {
+            name : "AEC Pack",
+            price: 59,
+            classname: "aec",
+            added: false,
+            description: [
+                "SVG, SKP, RVT, IFC format support (including 3D viewer) in Asset Library",
+                "3D BIM compare",
+                "4D compare",
+                "Automatic scaling using proprietary marker sheets"
+            ]
+        };
+        let enterprise = {
+            name : "Enterprise Pack",
+            price: 29,
+            classname: "ent",
+            added: false,
+            description: [
+                "Download CPX files (Cupix proprietary format) for archiving",
+                "Offline Desktop App to open CTX files",
+                "Share workspaces with collaborators with READ/WRITE permissions",
+                "Real-time discussion threads with signed users"
+            ]
+        };
+        let video = {
+            name : "Video Pack",
+            price: 39,
+            classname: "vid",
+            added: false,
+            description: [
+                "Support 360 videos including timelapse mode (low fps like 0.5, 1 or 2 fps)",
+                "Support hybrid upload (360 videos + 360 photos together)",
+                "Auto detect interval shooting 360 photos and 3D process them"
+            ]
+        };
+        // pricing variables
+        let buckets = [petitie, small, medium, large, xlarge ];
+        let packages = [photo, aec, enterprise, video];
+        let all_inclusive_dc = 0.2;
+        let yearly_dc = 0.15;
+        let sqft_per_pano=[100, 300];   // one pano can represent 100~300 square feet space
+        let file_size_per_pano = 4; // average pano file size in MB (ricoh theta: 2~4 MB)
+        let sqft2sqmts = 0.092903;
+
+        // global variables
+        var current_bucket = 0;
+        var total_price = 0;    // monthly price
+        
+        // init HTML
+        function init(){
+            init_bucket_table();
+            bucket_selected(0);
+            init_package_table();
+            update_price();
+        }
+
+        function init_bucket_table(){
+            // initialize the bucket table
+            var row;
+            var tr_str;
+            for(var i=0;i<3;++i){
+                tr_str = "<tr>";
+                var value;
+                var pre = "";
+                var post = "";
+                var custom_class = "";
+                switch(i){
+                    case 0:
+                        value = "name";
+                        custom_class = "header";
+                        tr_str += "<td class='row-name'></td>";
+                    break;
+                    case 1: 
+                        value = "price"; 
+                        pre="$";
+                        custom_class = "highlight";
+                        tr_str += "<td class='row-name'>Price</td>";
+                    break;
+                    case 2: 
+                        value = "storage";
+                        custom_class = "highlight";
+                        tr_str += "<td class='row-name'>Storage</td>";
+                        post="GB";
+                    break;
+                }
+                $.each(buckets, function(i,data) {
+                    tr_str += "<td class='" + data.classname + " " + custom_class + "'>" + pre + data[value] + post + "</td>";
+                });
+                tr_str += "</tr>";
+                row = $("#bucket-table").append(tr_str);
+            }
+            // add space estimate
+            tr_str = "<tr>";
+            tr_str += "<td class='row-name'>Space Estimate</td>";
+            $.each(buckets, function(i,data) {
+                let no_panos = data.storage*1024/file_size_per_pano;
+                let est = addComma(no_panos*sqft_per_pano[0]) + '~' + addComma(no_panos*sqft_per_pano[1]) + " sqft <br>";
+                est += addComma(no_panos*sqft_per_pano[0]*sqft2sqmts) + '~' + addComma(no_panos*sqft_per_pano[1]*sqft2sqmts) + " sqm";
+                tr_str += "<td class='est " + data.classname + "'>" + est + "</td>";
+            });
+            row = $("#bucket-table").append(tr_str);
+
+            // add Choose buttons
+            tr_str = "<tr>";
+            tr_str += "<td class='row-name'></td>";
+            $.each(buckets, function(i,data) {
+                tr_str += "<td class='" + data.classname + "'>"  + "<input type='button' value='Choose' onclick='bucket_selected("+i+")' />" + "</td>";
+            });
+            row = $("#bucket-table").append(tr_str);
+
+            // initialize description
+            $.each(storage_description, function(i,data) {
+                $("#storage-desc ul").append("<li>" + data + "</li>");
+            });
+
+            $.each(standard_feature_description, function(i,data) {
+                $("#standard-desc ul").append("<li>" + data + "</li>");
+            });
+
+            // space estimation parameters
+            $("#avg-file-size").bind('keyup mouseup', function () {
+                let v = $(this).val();
+                if(v<=0 || v>1000)
+                    return;
+                file_size_per_pano = $(this).val();
+                update_estimate();         
+            });
+        }
+
+        function bucket_selected(i){
+            current_bucket = i;
+            $("#bucket-table td").removeClass('selected');
+            let selector = "#bucket-table td." + buckets[i].classname;
+            $(selector).addClass('selected');
+            update_price();
+        }
+
+        function init_package_table(){
+            $.each(packages, function(i,data) {
+                var tr_str = "<tr>";
+                // check button
+                tr_str += "<td class='" + data.classname + "'>" + "<input type='checkbox' onclick='package_selected(this, "+i+")' />" + "</td>";
+                // name
+                tr_str += "<td class='highlight " + data.classname + "'>" + data.name + "</td>";
+                // description
+                tr_str += "<td class='tal " + data.classname + "'><ul>";
+                $.each(data.description, function(j,item) {
+                    tr_str += "<li>" + item + "</li>";
+                });
+                tr_str += "</ul>";
+                // price
+                tr_str += "<td class='highlight " + data.classname + "'>$" + data.price + "</td>";
+                
+                tr_str += "</tr>";
+                $("#package-table").append(tr_str);
+            });
+        }
+
+        function package_selected(check_box, i){
+            let selector = "#package-table td." + packages[i].classname;
+            if(check_box.checked){
+                $(selector).addClass('selected');
+                packages[i].added = true;
+            }else{
+                $(selector).removeClass('selected');
+                packages[i].added = false;
+            }
+            update_price();
+        }
+
+        function update_estimate(){
+            $.each(buckets, function(i,data) {
+                let no_panos = data.storage*1024/file_size_per_pano;
+                let est = addComma(no_panos*sqft_per_pano[0]) + '~' + addComma(no_panos*sqft_per_pano[1]) + " sqft <br>";
+                est += addComma(no_panos*sqft_per_pano[0]*sqft2sqmts) + '~' + addComma(no_panos*sqft_per_pano[1]*sqft2sqmts) + " sqm";
+                let td = $("#bucket-table td.est." + data.classname);
+                td.html(est);
+            });
+        }
+
+        function update_price(){
+            total_price = buckets[current_bucket].price;
+            var package_price = 0;
+            var all_selected = true;
+            $.each(packages, function(i,data) {
+                if(data.added)
+                    package_price += data.price;
+                else
+                    all_selected = false;
+            });
+            var inc_discount = "";
+            if(all_selected){
+                package_price *= (1-all_inclusive_dc);
+                inc_discount = "<br>Full Inclusive! " + all_inclusive_dc*100 + "% discounted"; 
+            }
+            
+            total_price += package_price;
+            $("#package-sub").html("$" + addComma(package_price, false) + inc_discount);
+            $("#monthly-billed").html("$" + addComma(total_price, false));
+            $("#yearly-billed").html("$" + addComma(total_price*(1-yearly_dc), false));            
+        }
+
+        function addComma(nStr, bThousandUnit=true) {
+            nStr = bThousandUnit ? parseInt(nStr/1000) : parseInt(nStr);
+            nStr += '';
+            var x = nStr.split('.');
+            var x1 = x[0];
+            var x2 = x.length > 1 ? '.' + x[1] : '';
+            var rgx = /(\d+)(\d{3})/;
+            while (rgx.test(x1)) {
+                x1 = x1.replace(rgx, '$1' + ',' + '$2');
+            }
+            return bThousandUnit ? x1 + x2 + "k" : x1 + x2 ;
+        }
+
+    </script>
+    <style>
+        body {
+            background-color: white;
+            font-family: Lato, Helvetica, sans-serif;
+            font-size:16px;
+            color: rgb(51,51,51);
+            margin:30px;
+            padding:0;
+        }
+        ul{
+            margin:0;
+        }
+        .selected{
+            background: #2ecc71;
+            color:white;
+        }
+        .df{
+            display: flex;
+        }
+        .vert{
+            flex-direction: column;
+            width: fit-content;
+        }
+        .center {
+            align-items: center;
+            justify-content: center;
+        }
+        .tal {
+            text-align: left;
+        }
+        .tar {
+            text-align: right;
+        }
+        .h-2{
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .h-2 .sub{
+            font-size: 18px;
+            font-weight: normal;
+            margin: 6px 0 0 24px;
+        }
+        .h-3{
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .space{
+            justify-content: space-around;
+        }
+        .bold{
+            font-weight: 700;
+        }
+        .note {
+        }
+        .highlight{
+            font-size: 24px;
+            font-weight: 700;
+        }
+        table{
+            background-color: #F5F5F5;
+            border-collapse: collapse;
+            margin: 20px;
+        }
+        table.sub{
+            background-color: transparent;
+            border-collapse: collapse;
+            margin: 5px;
+        }
+        table td{
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        #bucket-table td{
+            min-width: 140px;
+            padding: 8px;
+        }
+        #package-table td{
+            padding: 3px 12px;
+        }
+        table.sub td{
+            text-align: left;
+            padding: 8px;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        table .header {
+            font-size: 24px;
+        }
+        table .row-name{
+            text-align: right;
+            font-size: 18px;
+        }
+        input[type="button"] {
+            border: none;
+            color: rgb(51,51,51);
+            background-color:rgba(255,255,255,0.4);
+            padding: 12px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        input[type="button"]:hover {
+            background-color:rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="buckets">
+        <div class="h-2 df vert">
+            <div>1. Select a Storage Bucket</div>
+            <div class="sub">All Buckets Come with Standard Features</div>
+        </div>
+        <div class="df center">
+            <table id="bucket-table">
+            </table>
+            <div>
+                <div class="h-3">
+                    <span>How Storage Use is Counted?</span>
+                </div>
+                <div id="storage-desc" class="description">
+                    <ul></ul>
+                </div>
+            </div>
+        </div>
+        <div class="df space">
+            <div>
+                <div class="h-3">
+                    <span>Standard Features</span>
+                </div>
+                <div id="standard-desc" class="description">
+                    <ul></ul>
+                </div>
+            </div>
+            <div class="note" style="margin-left:20px; padding:20px; background:#F5F5F5;border-radius:4px;">
+                <div>
+                    <span class="bold">Space Estimate - avg file size of 360 photo</span>
+                    <input id="avg-file-size" type=number value="4" style="width:60px">
+                    <span>MB</span>
+                </div>
+                <div>
+                    <table class="sub">
+                        <tr>
+                            <td>Ricoh Theta V standard</td>
+                            <td>4</td>
+                        </tr>
+                        <tr>
+                            <td>Mi Sphere 4K</td>
+                            <td>8</td>
+                        </tr>
+                        <tr>
+                            <td>Yi time-lapse</td>
+                            <td>2 ??</td>
+                        </tr>
+                        <tr>
+                            <td>High-res DLSR</td>
+                            <td>16</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>        
+        </div>
+    </div>
+    <div id="packages">
+        <div class="h-2" style="margin-top:20px">
+            <div>2. Add Optional Packages</div>
+            <div class="sub"></div>
+        </div>
+        <div class="df vert">
+            <table id="package-table">
+            </table>
+            <div class="note tar">
+                <span>Package sub-total:</span>
+                <span id="package-sub"></span>
+            </div>
+        </div>
+    </div>
+    <div id="total-price">
+        <div class="h-2" style="margin-bottom:20px">
+            <span>3. Total Price</span>
+        </div>
+        <div class="highlight" style="margin-left:20px">
+            <span>Price/Month, Workpace: </span>
+            <span id="monthly-billed" style="font-size:120%"></span>
+        </div>
+        <div class="highlight" style="margin-left:20px">
+            <span>If billed yearly: </span>
+            <span id="yearly-billed"  style="font-size:120%"></span>
+        <div>
+    </div>
+    <script>
+        (function() {
+            init();
+        })();
+    </script>
+  </body>
+</html>

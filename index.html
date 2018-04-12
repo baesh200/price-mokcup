@@ -43,7 +43,8 @@
         let standard_feature_description = [
             "3D tour processing - automatic 3D tour generation from 360 photos",
             "Manage (search, sort, hashtag, delete) 3D tours",
-            "Create, search, activate (or deactivate) and delete Workspaces (A Workspace is a folder where you can organize many 3D tours.)",
+            "Create, search, activate (or deactivate) and delete Workspaces",
+            "A Workspace is a folder where you can organize many 3D tours. Petite plan allows only one workspace.",
             "Translate, scale, and align many 3D sections (=subset of a 3D tour) into a larger one",
             "Arrange a floor plan image (JPEG, PNG or PDF)",
             "Instant Web publish (anyone who knows the link can access and play the 3D tour) or embed 3D tours in your Website",
@@ -157,7 +158,7 @@
             }
             // add space estimate
             tr_str = "<tr>";
-            tr_str += "<td class='row-name'>Space Estimate</td>";
+            tr_str += "<td class='row-name'>Space Coverage Estimate</td>";
             $.each(buckets, function(i,data) {
                 let no_panos = data.storage*1024/file_size_per_pano;
                 let est = addComma(no_panos*sqft_per_pano[0]) + '~' + addComma(no_panos*sqft_per_pano[1]) + " sqft <br>";

@@ -3,9 +3,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <title>Demo</title>
     <script>
-        let petitie = {
-            name : "Petitie",
-            classname: "petitie",
+        let petite = {
+            name : "Petite",
+            classname: "petite",
             price: 0,
             storage: 0.2,
         };
@@ -100,7 +100,7 @@
             ]
         };
         // pricing variables
-        let buckets = [petitie, small, medium, large, xlarge ];
+        let buckets = [petite, small, medium, large, xlarge ];
         let packages = [photo, aec, enterprise, video];
         let all_inclusive_dc = 0.2;
         let yearly_dc = 0.15;
@@ -205,7 +205,7 @@
             $.each(packages, function(i,data) {
                 var tr_str = "<tr>";
                 // check button
-                tr_str += "<td class='" + data.classname + "'>" + "<input type='checkbox' onclick='package_selected(this, "+i+")' />" + "</td>";
+                tr_str += "<td class='" + data.classname + "'>" + "<input type='checkbox' class='css-checkbox' onclick='package_selected(this, "+i+")' />" + "</td>";
                 // name
                 tr_str += "<td class='highlight " + data.classname + "'>" + data.name + "</td>";
                 // description
